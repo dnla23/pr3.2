@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  init_service:
+    image: init_image
+    build:
+      context: .
+    container_name: init_service
+    command: ["sh", "-c", "echo Initializing..."]
+    networks:
+      - my_network
+
+  app_service:
+    image: app_image
+    build:
+      context: .
+    container_name: app_service
+    depends_on:
+      - db_service
+    command: ["python", "main.py"]
+    ports:
+      - "8000:8000"
+    networks:
+      - my_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      retries: 3
+    volumes:
+      - ./app:/app
+    environment:
+      - DB_HOST=db_service
+      - DB_PORT=5432
+      - DB_NAME=mydatabase
+      - DB_USER=user
+      - DB_PASSWORD=password
+
+  db_service:
+    image: postgres:13
+    container_name: db_service
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    networks:
+      - my_network
+    volumes:
+      - pgdata:/var/lib/postgresql/data 
+
+networks:
+  my_network:
+    driver: bridge
+
+volumes:
+  pgdata:
